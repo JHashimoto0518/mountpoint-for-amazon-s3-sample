@@ -1,4 +1,5 @@
-import { Stack, StackProps, CfnOutput } from 'aws-cdk-lib';
+import { Stack, StackProps, CfnOutput, RemovalPolicy } from 'aws-cdk-lib';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
@@ -27,6 +28,12 @@ export class CdkStack extends Stack {
       // remove all rules from default security group
       // See: https://docs.aws.amazon.com/config/latest/developerguide/vpc-default-security-group-closed.html
       restrictDefaultSecurityGroup: true
+    });
+
+    // s3 bucket for mount
+    const mountBucket = new s3.Bucket(this, 'MountBucket', {
+      removalPolicy: RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
     });
 
     //
@@ -59,8 +66,13 @@ export class CdkStack extends Stack {
     })
     userData.addCommands(
       // setup Mountpoint
-      'aws s3 cp s3://mountpoint-s3-release/latest/x86_64/mount-s3.rpm ./mount-s3.rpm',
-      'yum install -y ./mount-s3.rpm'
+      'wget https://s3.amazonaws.com/mountpoint-s3-release/latest/x86_64/mount-s3.rpm',
+      'yum install -y ./mount-s3.rpm',
+
+      'cd /home/ssm-user',
+      'mkdir sample-dir',
+
+      // TODO: mount s3
     )
 
     const ins = new ec2.Instance(this, 'Ec2', {
